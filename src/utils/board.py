@@ -1,10 +1,11 @@
 import numpy as np
+from PIL import Image, ImageDraw
 
 class Board:
-    WHITE = -1
+    WHITE =  -1
     BLACK =  1
     EMPTY =  0
-
+    ROWNAMES = "abcdefgh"
     DIRECTIONS = (  ( 1, 0),    # right
                     (-1, 0),    # left
                     ( 0, 1),    # down
@@ -15,7 +16,7 @@ class Board:
                     ( 1,-1),    # upwards right
                 )
 
-    def __init__(self) -> None:
+    def __init__(self, fen=None) -> None:
         '''Initiliaze the Othello game board with a 8x8 numpy matrix'''
         self.board = np.array([0]*8, dtype = np.int8)   # initiliasing 1D array with the first row of 8 zeroes
         self.board = self.board[np.newaxis, : ]         # expanding 1D array to 2D array
@@ -28,6 +29,7 @@ class Board:
 
         self.black_disc_count = 2
         self.white_disc_count = 2
+        self.turn = Board.BLACK
     
     @staticmethod
     def checkCoordRange(x: int, y: int) -> bool:
@@ -35,9 +37,21 @@ class Board:
 
         return (x >= 0 and y >= 0) and (x < 8 and y < 8)
 
-    def all_legal_moves(self, PLAYER: int) -> set:
-        '''Return all legal moves for the player'''
+    @staticmethod
+    def move2coord(move:str) -> tuple:
+        c = Board.ROWNAMES.index(move[0].lower())
+        r = 8 - int(move[1])
+        return (r,c)
+    
+    @staticmethod
+    def coord2move(coord:tuple) -> str:
+        r,c = coord
+        return f"{Board.ROWNAMES[c]}{8-r}"
 
+    def all_legal_moves(self, PLAYER: int=None) -> set:
+        '''Return all legal moves for the player'''
+        if not PLAYER:
+            PLAYER = self.turn
         all_legal_moves = set()
         for row in range(8):
             for col in range(8):
@@ -88,6 +102,10 @@ class Board:
             row += rowDir
             col += colDir
 
+    def is_legal_move(self, move:str):
+        move = Board.move2coord(move)
+        return move in self.all_legal_moves()
+
     def set_discs(self, row: int, col: int, PLAYER: int) -> None:
         '''Set the discs on the board as per the move made on the given cell'''
         
@@ -114,8 +132,52 @@ class Board:
         self.black_disc_count = self.board[self.board > 0].sum()
         self.white_disc_count = -self.board[self.board < 0].sum()
 
+
+    def push(self, move:str|tuple):
+        if isinstance(move, str):
+            x, y = Board.move2coord(move)
+        elif isinstance(move, tuple):
+            x, y = move
+        self.set_discs(x,y,self.turn)
+        self.turn *= -1
+
+        if len(self.all_legal_moves()) == 0:
+            self.turn *= -1
+
+
     def print_board(self) -> None:
-        print(self.board)
+        im = Image.open("./src/utils/board.png")
+        draw = ImageDraw.Draw(im)
+        border_size = 34
+        tile_size = 75
+        tile_buffer = 3
+
+        for r, row in enumerate(self.board):
+            for c, tile in enumerate(row):
+                x1 = border_size + c*tile_size + tile_buffer
+                y1 = border_size + r*tile_size + tile_buffer
+                x2 = border_size + (c+1)*tile_size - tile_buffer
+                y2 = border_size + (r+1)*tile_size - tile_buffer
+                if tile == Board.WHITE:
+                    fill = "white"
+                elif tile == Board.BLACK:
+                    fill = "black"
+                else:
+                    continue
+                draw.ellipse((x1, y1, x2, y2), fill = fill, outline ='black')
+
+        im.show()
+
+    def get_score(self) -> dict:
+        if self.black_disc_count > self.white_disc_count:
+            outcome = Board.BLACK
+        elif self.black_disc_count < self.white_disc_count:
+            outcome = Board.WHITE
+        else:
+            outcome = None
+        output = {"outcome": outcome, "white": self.white_disc_count, "black": self.black_disc_count}
+        return output
+
 
     def reset_board(self) -> None:
         self.board.fill(Board.EMPTY)
@@ -130,7 +192,7 @@ class Board:
         possibleBlackMoves = self.all_legal_moves(Board.BLACK)
         possibleWhiteMoves = self.all_legal_moves(Board.WHITE)
 
-        if not possibleBlackMoves or not possibleWhiteMoves:
+        if possibleBlackMoves or possibleWhiteMoves:
             return False
         return True
     
