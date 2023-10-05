@@ -146,7 +146,9 @@ class Board:
 
     def print_board(self) -> None:
         print(self.board)
-        return
+
+
+    def get_board(self):
         im = Image.open("./src/utils/board.png")
         draw = ImageDraw.Draw(im)
         border_size = 34
@@ -167,7 +169,7 @@ class Board:
                     continue
                 draw.ellipse((x1, y1, x2, y2), fill = fill, outline ='black')
 
-        im.show()
+        return im
 
     def get_score(self) -> dict:
         if self.black_disc_count > self.white_disc_count:
