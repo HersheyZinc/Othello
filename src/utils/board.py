@@ -16,20 +16,19 @@ class Board:
                     ( 1,-1),    # upwards right
                 )
 
-    def __init__(self, fen=None) -> None:
+    def __init__(self, board_state=None) -> None:
         '''Initiliaze the Othello game board with a 8x8 numpy matrix'''
         self.board = np.array([0]*8, dtype = np.int8)   # initiliasing 1D array with the first row of 8 zeroes
         self.board = self.board[np.newaxis, : ]         # expanding 1D array to 2D array
         for _ in range(3):                              # increasing rows till 8
             self.board = np.concatenate((self.board, self.board), axis = 0)
-
-        # initiliasing the centre squares
-        self.board[3, 3] = self.board[4,4] = Board.WHITE
-        self.board[3, 4] = self.board[4,3] = Board.BLACK
-
-        self.black_disc_count = 2
-        self.white_disc_count = 2
-        self.turn = Board.BLACK
+        self.black_disc_count = self.white_disc_count = 0
+        
+        if not board_state:
+            self.reset_board()
+        else:
+            self.set_board_state(board_state)
+            
     
     @staticmethod
     def checkCoordRange(x: int, y: int) -> bool:
@@ -146,6 +145,8 @@ class Board:
 
 
     def print_board(self) -> None:
+        print(self.board)
+        return
         im = Image.open("./src/utils/board.png")
         draw = ImageDraw.Draw(im)
         border_size = 34
@@ -187,6 +188,7 @@ class Board:
         self.board[3, 4] = self.board[4,3] = Board.BLACK
 
         self.black_disc_count = self.white_disc_count = 2
+        self.turn = Board.BLACK
 
     def check_game_over(self) -> bool:
         possibleBlackMoves = self.all_legal_moves(Board.BLACK)
@@ -220,3 +222,25 @@ class Board:
             corner_value = 100 * (black_corners - white_corners) / (black_corners + white_corners)
 
         return coin_parity + actual_mobility + corner_value
+
+
+    def set_board_state(self, board_state:str):
+        mapping = {"b":Board.BLACK, "w":Board.WHITE, "x":Board.EMPTY}
+        self.turn = mapping[board_state[-1]]
+        for r in range(8):
+            for c in range(8):
+                tile_value = board_state[r*8+c]
+                disc = mapping[tile_value]
+                self.board[r,c] = disc
+
+        self.black_disc_count = self.board[self.board > 0].sum()
+        self.white_disc_count = -self.board[self.board < 0].sum()
+
+
+    def get_board_state(self):
+        mapping = {Board.BLACK:"b", Board.WHITE:"w", Board.EMPTY:"x"}
+        board_state = "".join([mapping[x] for x in self.board.flatten()])
+        board_state = board_state + " " + mapping[self.turn]
+        return board_state
+
+    
