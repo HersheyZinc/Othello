@@ -149,7 +149,7 @@ class Board:
 
 
     def get_board(self):
-        im = Image.open("./src/utils/board.png")
+        im = Image.open("board.png")
         draw = ImageDraw.Draw(im)
         border_size = 34
         tile_size = 75
